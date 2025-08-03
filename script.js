@@ -1,52 +1,81 @@
 document.addEventListener('DOMContentLoaded', () => {
     const todoInput = document.getElementById("todo-input");
-    const addTaskButton = document.getElementById("add-task-btn");
+    const addTaskBtn = document.getElementById("add-task-btn");
     const todoList = document.getElementById("todo-list");
 
-    let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+    let tasks = loadTasks();
 
-    tasks.forEach(task => renderTask(task));
+    renderTasks();
+
+    function loadTasks() {
+        return JSON.parse(localStorage.getItem("tasks")) || [];
+    }
 
     function saveTask() {
         localStorage.setItem("tasks", JSON.stringify(tasks));
     }
 
-    function renderTask(task) {
-        const li = document.createElement("li");
-        li.setAttribute("data-id", task.id);
-        if(task.isCompleted) {
-            li.classList.add("completed");
-        }
+    function renderTasks() {
+        todoList.innerHTML = "";
+        let fragment = document.createDocumentFragment();
+        tasks.forEach(task => {
+            fragment.appendChild(renderEachElement(task));
+        });
+        todoList.appendChild(fragment);
+    }
+
+    function renderEachElement(task) {
+        const li = document.createElement('li');
+        li.dataset.id = task.id;
+        li.className = task.isCompleted? 'completed':'';
         li.innerHTML = `
-        <span>${task.text}</span>
-        <button>delete</button>
+            <span>${task.text}</span>  
+            <button>Delete</button>  
         `;
-        li.addEventListener('click', (e) => {
-            if(e.target.tagName === 'BUTTON') {
-                return;
-            }
-            task.isCompleted = !task.isCompleted;
-            li.classList.toggle("completed");
-            saveTask();
-        })
-        todoList.appendChild(li);
+        return li;
     }
 
 
-    addTaskButton.addEventListener('click', () => {
-        const taskText = todoInput.value.trim();
-        if(taskText === "") {
-            return;
-        }
-        const newTask = {
+    function addTask(text) {
+        task = {
             id: Date.now(),
-            text: taskText,
+            text,
             isCompleted: false
         };
-
-        tasks.push(newTask);
+        tasks.push(task);
         saveTask();
-        todoInput.value = ""; //To clear the input
-        console.log(tasks);
-    })
+        todoList.appendChild(renderEachElement(task));
+    }
+
+    //Add Task
+    addTaskBtn.addEventListener('click', () => {
+        const taskText = todoInput.value.trim();
+        if(!taskText) {
+            return;
+        }
+        addTask(taskText);
+        todoInput.value = "";
+    });
+
+    todoList.addEventListener('click', (e) => {
+        const li = e.target.closest('li');
+        if(!li) {
+            return;
+        }
+        const taskId = Number (li.dataset.id);
+
+        if(e.target.tagName === 'BUTTON') {
+            //e.stopPropagation();
+            tasks = tasks.filter((task) => task.id != taskId)
+            li.remove();
+        }
+        else if(e.target.tagName === 'SPAN') {
+            const task = tasks.find((task) => task.id == taskId); 
+            if(task) {
+                task.isCompleted = !task.isCompleted;
+                li.classList.toggle('completed');
+            }
+        }
+        saveTask();
+    });
 })
